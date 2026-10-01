@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>누가 발표할까 - 오리보트 레이스</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    
+    * {
+      font-family: 'Pretendard', sans-serif;
+      user-select: none;
+    }
+
+    /* Custom bouncy buttons and animations */
+    .btn-bounce {
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+    }
+    .btn-bounce:active {
+      transform: scale(0.93);
+    }
+    .btn-bounce:hover {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(3deg); }
+    }
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #fcd34d;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-800 min-h-screen flex items-center justify-center p-2 sm:p-4 overflow-x-hidden">
+
+  <!-- Main Container -->
+  <div id="app" class="w-full max-w-lg bg-gradient-to-b from-sky-100 to-amber-50 rounded-3xl shadow-2xl overflow-hidden border-4 border-amber-300 relative flex flex-col min-h-[680px]">
+
+    <!-- Header Control -->
+    <header class="bg-amber-400 px-5 py-3.5 flex items-center justify-between border-b-4 border-amber-500 shadow-md relative z-20">
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="location.reload()">
+        <span class="text-3xl animate-float inline-block">🦆</span>
+        <div>
+          <h1 class="font-black text-xl text-amber-950 tracking-tight leading-none">누가 발표할까</h1>
+          <p class="text-[10px] font-bold text-amber-800 tracking-wider uppercase mt-0.5">Duck Boat Race Presenter Picker</p>
+        </div>
+      </div>
+      <button id="audio-toggle-btn" onclick="toggleAudio()" class="w-10 h-10 rounded-2xl bg-amber-200 border-2 border-amber-500 text-amber-900 flex items-center justify-center font-bold shadow hover:bg-amber-100 transition">
+        <i id="audio-icon" class="fa-solid fa-volume-high"></i>
+      </button>
+    </header>
+
+    <!-- SECTION 1: SETUP SCREEN -->
+    <main id="setup-screen" class="p-5 flex-1 flex flex-col justify-between overflow-y-auto z-10 space-y-4">
+      
+      <!-- Banner / Intro -->
+      <div class="bg-white/80 backdrop-blur rounded-2xl p-4 border-2 border-sky-200 shadow-sm flex items-center gap-3">
+        <div class="text-4xl">🌊</div>
+        <div class="text-xs text-slate-600 leading-relaxed">
+          <span class="font-extrabold text-amber-600 text-sm block mb-0.5">긴장감 넘치는 25초 귀여운 오리보트 레이스!</span>
+          참가자 이름을 입력하고 시작하세요. 알록달록 오리들이 부스터와 장애물을 헤치고 결승선에 도착합니다!
+        </div>
+      </div>
+
+      <!-- Participant Input Area -->
+      <div class="bg-white rounded-2xl p-4 border-2 border-amber-200 shadow-sm space-y-3">
+        <div class="flex justify-between items-center">
+          <label class="font-bold text-slate-700 text-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-users text-amber-500"></i> 참가자 목록
+          </label>
+          <span id="player-count-badge" class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">0명</span>
+        </div>
+
+        <textarea id="player-input" rows="3" 
+          class="w-full p-3 text-sm bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-amber-400 focus:bg-white transition resize-none"
+          placeholder="참가자 이름을 쉼표(,)나 줄바꿈으로 구분해 입력하세요 (예: 김철수, 이영희, 박민수, 정수진)"
+          oninput="updatePlayerListFromInput()"></textarea>
+
+        <!-- Quick Preset Buttons -->
+        <div class="flex items-center gap-2 pt-1">
+          <span class="text-[11px] font-bold text-slate-400">빠른 생성:</span>
+          <div class="flex gap-1.5">
+            <button onclick="setPresetPlayers(3)" class="px-2.5 py-1 text-xs font-bold bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition">3명</button>
+            <button onclick="setPresetPlayers(5)" class="px-2.5 py-1 text-xs font-bold bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition">5명</button>
+            <button onclick="setPresetPlayers(8)" class="px-2.5 py-1 text-xs font-bold bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition">8명</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode & Options -->
+      <div class="grid grid-cols-1 gap-3">
+        
+        <!-- Win Condition Selection -->
+        <div class="bg-white rounded-2xl p-4 border-2 border-amber-200 shadow-sm space-y-2">
+          <label class="font-bold text-slate-700 text-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-trophy text-amber-500"></i> 발표자 선정 규칙
+          </label>
+          
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="rule-last-btn" onclick="setWinRule('last')" 
+              class="p-2.5 rounded-xl border-2 border-amber-400 bg-amber-50 font-bold text-xs text-amber-900 flex items-center justify-center gap-1.5 shadow-sm transition">
+              <span>🐢</span> 꼴찌가 발표자 (기본)
+            </button>
+            <button type="button" id="rule-first-btn" onclick="setWinRule('first')" 
+              class="p-2.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-bold text-xs text-slate-600 flex items-center justify-center gap-1.5 transition">
+              <span>🚀</span> 1등이 발표자
+            </button>
+          </div>
+        </div>
+
+        <!-- Track Selection -->
+        <div class="bg-white rounded-2xl p-4 border-2 border-amber-200 shadow-sm space-y-2">
+          <label class="font-bold text-slate-700 text-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-map text-amber-500"></i> 레이스 트랙 테마
+          </label>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="setTheme('sunny')" id="theme-sunny-btn" class="p-2 rounded-xl border-2 border-amber-400 bg-sky-50 text-center transition">
+              <div class="text-xl">☀️</div>
+              <div class="text-[11px] font-bold mt-1 text-sky-900">햇살 호수</div>
+            </button>
+            <button onclick="setTheme('night')" id="theme-night-btn" class="p-2 rounded-xl border-2 border-slate-200 bg-slate-100 text-center transition opacity-70">
+              <div class="text-xl">🌙</div>
+              <div class="text-[11px] font-bold mt-1 text-slate-700">달빛 호수</div>
+            </button>
+            <button onclick="setTheme('rainbow')" id="theme-rainbow-btn" class="p-2 rounded-xl border-2 border-slate-200 bg-slate-100 text-center transition opacity-70">
+              <div class="text-xl">🌈</div>
+              <div class="text-[11px] font-bold mt-1 text-purple-900">무지개 레인</div>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Start Race Button -->
+      <button onclick="prepareAndStartRace()" class="btn-bounce w-full py-4 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-400 text-amber-950 font-black text-lg rounded-2xl shadow-lg border-2 border-amber-300 flex items-center justify-center gap-2 mt-2">
+        <i class="fa-solid fa-flag-checkered text-xl"></i> 레이스 시작하기! (약 25초)
+      </button>
+
+    </main>
+
+    <!-- SECTION 2: IN-GAME RACE SCREEN -->
+    <section id="game-screen" class="hidden flex-1 flex-col justify-between relative bg-sky-300 overflow-hidden">
+      
+      <!-- Top Status Header -->
+      <div class="bg-slate-900/80 backdrop-blur text-white px-4 py-2.5 flex items-center justify-between text-xs z-20 border-b border-white/10">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+          <span class="font-bold tracking-wide text-amber-300" id="current-theme-label">☀️ 햇살 호수 트랙</span>
+        </div>
+        <div class="font-mono text-slate-300 font-bold" id="race-timer">00:00.0</div>
+      </div>
+
+      <!-- Live Leaderboard Ticker -->
+      <div id="live-leaderboard" class="bg-black/40 text-white text-[11px] px-3 py-1 flex items-center gap-2 overflow-x-auto whitespace-nowrap z-20 font-bold border-b border-white/10">
+        <span class="text-amber-400"><i class="fa-solid fa-ranking-star"></i> 순위:</span>
+        <div id="leaderboard-items" class="flex gap-3">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- HTML5 Canvas for Race Game -->
+      <div class="relative flex-1 w-full bg-sky-200">
+        <canvas id="race-canvas" class="w-full h-full block"></canvas>
+        
+        <!-- Center Big Countdown Overlay -->
+        <div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-30">
+          <div id="countdown-text" class="text-8xl font-black text-yellow-300 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] scale-150 transition-all duration-300">
+            3
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Interactive Cheer Bar -->
+      <div class="bg-white/90 backdrop-blur px-4 py-3 border-t-2 border-amber-300 flex items-center justify-between gap-3 z-20">
+        <button onclick="cheerForDucks()" class="btn-bounce flex-1 py-2.5 bg-gradient-to-r from-pink-400 to-rose-500 text-white font-extrabold text-sm rounded-xl shadow-md border-2 border-pink-300 flex items-center justify-center gap-2 active:scale-95">
+          <span class="text-lg">📣</span> 응원하기! <span id="cheer-count" class="text-xs bg-white/30 px-2 py-0.5 rounded-full">0</span>
+        </button>
+        <button onclick="toggleSpeed()" id="speed-btn" class="px-3 py-2.5 bg-slate-800 text-amber-300 font-bold text-xs rounded-xl shadow border border-slate-700 flex items-center gap-1">
+          <i class="fa-solid fa-bolt"></i> <span id="speed-label">1x</span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- SECTION 3: RESULT & CEREMONY SCREEN -->
+    <section id="result-screen" class="hidden p-5 flex-1 flex-col items-center justify-between overflow-y-auto bg-gradient-to-b from-amber-100 via-sky-50 to-amber-50 z-20 space-y-4">
+      
+      <!-- Result Title Banner -->
+      <div class="text-center space-y-1 mt-2">
+        <div class="inline-block px-3 py-1 bg-amber-400 text-amber-950 rounded-full font-black text-xs uppercase tracking-wider mb-1 shadow-sm">
+          🏆 레이스 종료 🏆
+        </div>
+        <h2 id="result-header-text" class="text-2xl font-black text-slate-800">
+          오늘의 발표자를 공개합니다!
+        </h2>
+      </div>
+
+      <!-- Presenter Spotlight Card -->
+      <div class="w-full bg-white rounded-3xl p-5 border-4 border-amber-400 shadow-xl text-center space-y-3 relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-28 h-28 bg-amber-200 rounded-full blur-2xl opacity-50"></div>
+        
+        <div class="w-24 h-24 mx-auto bg-amber-100 rounded-full border-4 border-amber-300 flex items-center justify-center text-5xl shadow-inner animate-float relative overflow-hidden">
+          <canvas id="winner-duck-canvas" width="80" height="80" class="block"></canvas>
+          <span class="absolute -bottom-1 -right-1 text-2xl">🎉</span>
+        </div>
+
+        <div>
+          <span class="text-xs font-bold text-slate-400 block">선정된 발표자</span>
+          <h3 id="presenter-name-display" class="text-3xl font-black text-amber-600 tracking-tight my-0.5">
+            김철수 님
+          </h3>
+          <p id="presenter-reason-display" class="text-xs font-bold text-slate-500">
+            🐢 아쉽게도 꼴찌로 결승선을 통과했습니다!
+          </p>
+        </div>
+
+        <!-- Full Race Rankings List -->
+        <div class="pt-3 border-t border-slate-100 text-left">
+          <div class="text-xs font-bold text-slate-400 mb-2 flex justify-between">
+            <span>최종 도착 순위</span>
+            <span id="win-rule-badge" class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">꼴찌가 발표자</span>
+          </div>
+          <div id="final-rankings-list" class="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+            <!-- Ranking list items populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Generated Presentation Pledge (발표 서약서) -->
+      <div id="pledge-card" class="w-full bg-amber-50 rounded-2xl p-4 border-2 border-dashed border-amber-300 text-center space-y-2 shadow-sm">
+        <div class="text-xs font-black text-amber-900 tracking-wider">📜 [발표 이행 서약서]</div>
+        <p class="text-xs text-slate-700 leading-relaxed font-medium">
+          본인 <span id="pledge-name" class="font-extrabold text-amber-700 underline">김철수</span>(은)는 공정한 '누가 발표할까' 오리보트 레이스 결과에 깨끗이 복종하며, 팀을 위해 최고의 발표를 선보일 것을 엄숙히 서약합니다! 꽥!
+        </p>
+        <div id="pledge-date" class="text-[10px] font-bold text-slate-400">2026. 10. 01</div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="w-full grid grid-cols-2 gap-3 pt-2">
+        <button onclick="copyPledgeToClipboard()" class="btn-bounce py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm rounded-xl shadow border-2 border-sky-400 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-copy"></i> 서약서 복사
+        </button>
+        <button onclick="restartSetup()" class="btn-bounce py-3 bg-amber-400 hover:bg-amber-500 text-amber-950 font-black text-sm rounded-xl shadow border-2 border-amber-300 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-rotate-right"></i> 다시 하기
+        </button>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- Toast Message Box -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center gap-2 border border-slate-700">
+    <i class="fa-solid fa-circle-info text-amber-400"></i>
+    <span id="toast-message">메시지</span>
+  </div>
+
+  <!-- JAVASCRIPT APP LOGIC -->
+  <script>
+    /* ====================================================================
+       1. GLOBAL STATE & SOUND SYNTHESIZER (WEB AUDIO API)
+       ==================================================================== */
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      const icon = document.getElementById('audio-icon');
+      const btn = document.getElementById('audio-toggle-btn');
+      if (soundEnabled) {
+        icon.className = 'fa-solid fa-volume-high';
+        btn.classList.replace('bg-slate-200', 'bg-amber-200');
+        playQuackSound();
+      } else {
+        icon.className = 'fa-solid fa-volume-xmark';
+        btn.classList.replace('bg-amber-200', 'bg-slate-200');
+      }
+    }
+
+    // Procedural Audio Synthesizer functions
+    function playBeep(freq = 440, duration = 0.15, type = 'sine') {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch(e){}
+    }
+
+    function playQuackSound() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(160, ctx.currentTime + 0.22);
+        
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.23);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.23);
+      } catch(e){}
+    }
+
+    function playBoosterSound() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(180, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(750, ctx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } catch(e){}
+    }
+
+    function playObstacleHitSound() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(280, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.35, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } catch(e){}
+    }
+
+    function playVictoryFanfare() {
+      if (!soundEnabled) return;
+      const notes = [261.63, 329.63, 392.00, 523.25];
+      notes.forEach((freq, idx) => {
+        setTimeout(() => playBeep(freq, 0.25, 'triangle'), idx * 120);
+      });
+    }
+
+    /* ====================================================================
+       2. GAME SETUP & CONFIGURATION
+       ==================================================================== */
+    let players = ['김철수', '이영희', '박민수', '정수진', '최지훈'];
+    let winRule = 'last'; // 'last' or 'first'
+    let currentTheme = 'sunny'; 
+    let cheerCount = 0;
+    let gameSpeedMultiplier = 1;
+
+    // Colorful palette derived for unique player ducks while maintaining the cute aesthetic
+    const DUCK_COLOR_PALETTES = [
+      { body: '#FDE047', wing: '#FEF08A', darkStroke: '#EAB308' }, // Original Cute Yellow
+      { body: '#38BDF8', wing: '#BAE6FD', darkStroke: '#0284C7' }, // Sky Blue
+      { body: '#4ADE80', wing: '#BBF7D0', darkStroke: '#16A34A' }, // Mint Green
+      { body: '#F472B6', wing: '#FBCFE8', darkStroke: '#DB2777' }, // Pastel Pink
+      { body: '#C084FC', wing: '#E9D5FF', darkStroke: '#9333EA' }, // Lavender
+      { body: '#FB923C', wing: '#FFEDD5', darkStroke: '#EA580C' }, // Orange
+      { body: '#F87171', wing: '#FECACA', darkStroke: '#DC2626' }, // Coral Red
+      { body: '#2DD4BF', wing: '#CCFBF1', darkStroke: '#0D9488' }  // Turquoise
+    ];
+
+    const THEME_CONFIGS = {
+      sunny: {
+        name: '☀️ 햇살 호수',
+        waterColor: '#38bdf8',
+        waveColor: '#bae6fd',
+        laneColor: 'rgba(255, 255, 255, 0.25)'
+      },
+      night: {
+        name: '🌙 달빛 호수',
+        waterColor: '#1e293b',
+        waveColor: '#334155',
+        laneColor: 'rgba(255, 255, 255, 0.15)'
+      },
+      rainbow: {
+        name: '🌈 무지개 레인',
+        waterColor: '#c084fc',
+        waveColor: '#fbcfe8',
+        laneColor: 'rgba(255, 255, 255, 0.3)'
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('player-input').value = players.join(', ');
+      updatePlayerListFromInput();
+    });
+
+    function updatePlayerListFromInput() {
+      const rawText = document.getElementById('player-input').value;
+      players = rawText.split(/[\n,]+/)
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+      
+      const badge = document.getElementById('player-count-badge');
+      badge.textContent = `${players.length}명`;
+    }
+
+    function setPresetPlayers(count) {
+      const presets = [
+        ['김철수', '이영희', '박민수'],
+        ['김철수', '이영희', '박민수', '정수진', '최지훈'],
+        ['김철수', '이영희', '박민수', '정수진', '최지훈', '강서연', '윤도현', '한지민']
+      ];
+      let selected = presets[0];
+      if (count === 5) selected = presets[1];
+      if (count === 8) selected = presets[2];
+
+      document.getElementById('player-input').value = selected.join(', ');
+      updatePlayerListFromInput();
+      showToast(`${count}명 프로필이 추가되었습니다.`);
+    }
+
+    function setWinRule(rule) {
+      winRule = rule;
+      const lastBtn = document.getElementById('rule-last-btn');
+      const firstBtn = document.getElementById('rule-first-btn');
+
+      if (rule === 'last') {
+        lastBtn.className = "p-2.5 rounded-xl border-2 border-amber-400 bg-amber-50 font-bold text-xs text-amber-900 flex items-center justify-center gap-1.5 shadow-sm transition";
+        firstBtn.className = "p-2.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-bold text-xs text-slate-600 flex items-center justify-center gap-1.5 transition";
+      } else {
+        firstBtn.className = "p-2.5 rounded-xl border-2 border-amber-400 bg-amber-50 font-bold text-xs text-amber-900 flex items-center justify-center gap-1.5 shadow-sm transition";
+        lastBtn.className = "p-2.5 rounded-xl border-2 border-slate-200 bg-slate-50 font-bold text-xs text-slate-600 flex items-center justify-center gap-1.5 transition";
+      }
+    }
+
+    function setTheme(themeKey) {
+      currentTheme = themeKey;
+      ['sunny', 'night', 'rainbow'].forEach(t => {
+        const btn = document.getElementById(`theme-${t}-btn`);
+        if (t === themeKey) {
+          btn.classList.replace('border-slate-200', 'border-amber-400');
+          btn.classList.remove('opacity-70');
+        } else {
+          btn.classList.replace('border-amber-400', 'border-slate-200');
+          btn.classList.add('opacity-70');
+        }
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    /* ====================================================================
+       3. CANVAS ENGINE, ENHANCED OBSTACLES & VECTOR DUCK RENDERER
+       ==================================================================== */
+    let canvas, ctx;
+    let ducks = [];
+    let obstacles = [];
+    let activeEffects = [];
+    let isRacing = false;
+    let finishedDucks = [];
+    let raceStartTime = 0;
+    let waveOffset = 0;
+
+    function prepareAndStartRace() {
+      updatePlayerListFromInput();
+      if (players.length < 2) {
+        showToast('최소 2명 이상의 참가자가 필요합니다!');
+        return;
+      }
+
+      document.getElementById('setup-screen').classList.add('hidden');
+      document.getElementById('game-screen').classList.remove('hidden');
+      document.getElementById('game-screen').classList.add('flex');
+
+      document.getElementById('current-theme-label').textContent = THEME_CONFIGS[currentTheme].name;
+
+      canvas = document.getElementById('race-canvas');
+      ctx = canvas.getContext('2d');
+      resizeCanvas();
+
+      initRaceData();
+      startCountdown();
+    }
+
+    function resizeCanvas() {
+      const container = canvas.parentElement;
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', () => {
+      if (canvas && isRacing) resizeCanvas();
+    });
+
+    function initRaceData() {
+      ducks = [];
+      finishedDucks = [];
+      obstacles = [];
+      activeEffects = [];
+      cheerCount = 0;
+      document.getElementById('cheer-count').textContent = '0';
+
+      const laneHeight = canvas.height / players.length;
+
+      players.forEach((name, index) => {
+        ducks.push({
+          id: index,
+          name: name,
+          x: 45,
+          y: laneHeight * index + laneHeight / 2,
+          radius: Math.min(22, laneHeight * 0.32),
+          speed: 0.3,
+          palette: DUCK_COLOR_PALETTES[index % DUCK_COLOR_PALETTES.length],
+          finished: false,
+          finishTime: 0,
+          wobble: Math.random() * 100,
+          spinAngle: 0
+        });
+      });
+
+      // Spawn items along the track for each duck lane
+      const trackLength = canvas.width - 120;
+      const obstacleTypes = ['whirlpool', 'weed', 'rock'];
+      const boosterTypes = ['rocket', 'turbine'];
+
+      players.forEach((_, laneIdx) => {
+        const laneY = laneHeight * laneIdx + laneHeight / 2;
+
+        // 2 Boosters per lane
+        [0.22, 0.62].forEach(ratio => {
+          const bType = boosterTypes[Math.floor(Math.random() * boosterTypes.length)];
+          obstacles.push({
+            id: `b_${laneIdx}_${ratio}`,
+            category: 'booster',
+            type: bType,
+            x: 50 + ratio * trackLength + (Math.random() * 20 - 10),
+            y: laneY,
+            radius: 18,
+            hit: false
+          });
+        });
+
+        // 2 Obstacles per lane
+        [0.40, 0.80].forEach(ratio => {
+          const oType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+          obstacles.push({
+            id: `o_${laneIdx}_${ratio}`,
+            category: 'obstacle',
+            type: oType,
+            x: 50 + ratio * trackLength + (Math.random() * 20 - 10),
+            y: laneY,
+            radius: 18,
+            hit: false
+          });
+        });
+      });
+    }
+
+    function startCountdown() {
+      const overlay = document.getElementById('countdown-overlay');
+      const text = document.getElementById('countdown-text');
+      overlay.classList.remove('hidden');
+      
+      let count = 3;
+      text.textContent = count;
+      playBeep(523, 0.15);
+
+      const timer = setInterval(() => {
+        count--;
+        if (count > 0) {
+          text.textContent = count;
+          playBeep(523, 0.15);
+        } else if (count === 0) {
+          text.textContent = 'GO!';
+          text.classList.add('text-emerald-400');
+          playBeep(880, 0.3, 'sawtooth');
+        } else {
+          clearInterval(timer);
+          overlay.classList.add('hidden');
+          text.classList.remove('text-emerald-400');
+          startRaceLoop();
+        }
+      }, 900);
+    }
+
+    function startRaceLoop() {
+      isRacing = true;
+      raceStartTime = performance.now();
+      requestAnimationFrame(updateAndRenderRace);
+    }
+
+    function updateAndRenderRace(timestamp) {
+      if (!isRacing) return;
+
+      const elapsed = (timestamp - raceStartTime) / 1000;
+      document.getElementById('race-timer').textContent = elapsed.toFixed(1) + 's';
+
+      updateDucksPhysics();
+      renderRaceCanvas();
+      updateLeaderboardTicker();
+
+      if (finishedDucks.length === players.length) {
+        isRacing = false;
+        setTimeout(showFinalResults, 1000);
+      } else {
+        requestAnimationFrame(updateAndRenderRace);
+      }
+    }
+
+    function updateDucksPhysics() {
+      const finishX = canvas.width - 50;
+      const trackWidth = canvas.width - 95;
+
+      ducks.forEach(duck => {
+        if (duck.finished) return;
+
+        // Base speed calibrated so duck crosses track in ~24s (approx 20-30 seconds)
+        const baseTargetSpeed = (trackWidth / 24) / 60; 
+        const accel = (Math.random() - 0.48) * 0.08 * gameSpeedMultiplier;
+        
+        duck.speed = Math.max(baseTargetSpeed * 0.4, Math.min(baseTargetSpeed * 2.8, duck.speed + accel));
+
+        // Check Collision with items
+        obstacles.forEach(item => {
+          if (!item.hit && Math.abs(duck.y - item.y) < 12) {
+            const dist = Math.abs(duck.x - item.x);
+            if (dist < 22) {
+              item.hit = true;
+              
+              if (item.category === 'booster') {
+                duck.speed += baseTargetSpeed * 1.8;
+                playBoosterSound();
+                
+                const label = item.type === 'rocket' ? '🚀 로켓 부스터!' : '⚡ 슈퍼 가속!';
+                activeEffects.push({
+                  text: label,
+                  x: duck.x,
+                  y: duck.y - 15,
+                  color: '#facc15',
+                  scale: 1.8,
+                  alpha: 1.0,
+                  type: 'booster'
+                });
+
+              } else {
+                duck.speed = Math.max(0.1, duck.speed - baseTargetSpeed * 1.2);
+                duck.spinAngle = Math.PI * 2;
+                playObstacleHitSound();
+
+                const labels = {
+                  whirlpool: '🌀 소용돌이 충돌!',
+                  weed: '🌿 미역 감김!',
+                  rock: '🪨 바위 충돌!'
+                };
+
+                activeEffects.push({
+                  text: labels[item.type],
+                  x: duck.x,
+                  y: duck.y - 15,
+                  color: '#ef4444',
+                  scale: 1.8,
+                  alpha: 1.0,
+                  type: 'obstacle'
+                });
+              }
+            }
+          }
+        });
+
+        if (duck.spinAngle > 0) duck.spinAngle -= 0.2;
+
+        duck.x += duck.speed * gameSpeedMultiplier;
+        duck.wobble += 0.12;
+
+        if (duck.x >= finishX) {
+          duck.x = finishX;
+          duck.finished = true;
+          duck.finishTime = (performance.now() - raceStartTime) / 1000;
+          finishedDucks.push(duck);
+          playQuackSound();
+        }
+      });
+
+      // Update Floating Popups
+      activeEffects.forEach(fx => {
+        fx.y -= 0.8;
+        fx.scale = Math.max(1.0, fx.scale - 0.02);
+        fx.alpha -= 0.02;
+      });
+      activeEffects = activeEffects.filter(fx => fx.alpha > 0);
+    }
+
+    function renderRaceCanvas() {
+      const theme = THEME_CONFIGS[currentTheme];
+      const laneHeight = canvas.height / players.length;
+
+      // Background Water
+      ctx.fillStyle = theme.waterColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Waves
+      waveOffset += 0.05;
+      ctx.strokeStyle = theme.waveColor;
+      ctx.lineWidth = 2;
+      for (let y = 15; y < canvas.height; y += 30) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += 20) {
+          const waveY = y + Math.sin(x * 0.03 + waveOffset) * 3;
+          if (x === 0) ctx.moveTo(x, waveY);
+          else ctx.lineTo(x, waveY);
+        }
+        ctx.stroke();
+      }
+
+      // Lane Dividers
+      ctx.strokeStyle = theme.laneColor;
+      ctx.lineWidth = 1.5;
+      for (let i = 1; i < players.length; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, laneHeight * i);
+        ctx.lineTo(canvas.width, laneHeight * i);
+        ctx.stroke();
+      }
+
+      // Draw Enlarged Track Items (Obstacles & Boosters)
+      obstacles.forEach(item => {
+        if (item.hit) return;
+
+        ctx.save();
+        ctx.translate(item.x, item.y);
+
+        // Outer Glow Ring
+        ctx.beginPath();
+        ctx.arc(0, 0, item.radius + 4, 0, Math.PI * 2);
+        ctx.fillStyle = item.category === 'booster' ? 'rgba(250, 204, 21, 0.35)' : 'rgba(239, 68, 68, 0.35)';
+        ctx.fill();
+
+        // Inner Circle Icon
+        ctx.beginPath();
+        ctx.arc(0, 0, item.radius, 0, Math.PI * 2);
+        ctx.fillStyle = item.category === 'booster' ? '#fef08a' : '#fee2e2';
+        ctx.fill();
+        ctx.strokeStyle = item.category === 'booster' ? '#eab308' : '#ef4444';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        const icons = {
+          rocket: '🚀',
+          turbine: '⚡',
+          whirlpool: '🌀',
+          weed: '🌿',
+          rock: '🪨'
+        };
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(icons[item.type], 0, 1);
+
+        ctx.restore();
+      });
+
+      // Draw Finish Line Checkers
+      const finishX = canvas.width - 45;
+      const checkerSize = 10;
+      for (let y = 0; y < canvas.height; y += checkerSize) {
+        ctx.fillStyle = (Math.floor(y / checkerSize) % 2 === 0) ? '#ffffff' : '#000000';
+        ctx.fillRect(finishX, y, 10, checkerSize);
+      }
+
+      // Draw Ducks
+      ducks.forEach(duck => {
+        drawCustomDuck(ctx, duck.x, duck.y, duck.radius, duck.palette, duck.wobble, duck.spinAngle, duck.name);
+      });
+
+      // Draw Prominent Floating Impact FX Popups
+      activeEffects.forEach(fx => {
+        ctx.save();
+        ctx.globalAlpha = fx.alpha;
+        ctx.translate(fx.x, fx.y);
+        ctx.scale(fx.scale, fx.scale);
+
+        // Badge Container
+        ctx.fillStyle = fx.type === 'booster' ? '#fef08a' : '#fee2e2';
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-55, -14, 110, 24, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // Text
+        ctx.fillStyle = fx.type === 'booster' ? '#854d0e' : '#991b1b';
+        ctx.font = 'bold 11px Pretendard, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(fx.text, 0, 0);
+
+        ctx.restore();
+      });
+    }
+
+    /* ====================================================================
+       VECTOR DUCK GRAPHIC DRAWING FUNCTION (Matching uploaded image)
+       ==================================================================== */
+    function drawCustomDuck(targetCtx, x, y, size, palette, wobble, spinAngle, name) {
+      targetCtx.save();
+      
+      const wobbleY = Math.sin(wobble) * 2;
+      targetCtx.translate(x, y + wobbleY);
+
+      if (spinAngle > 0) {
+        targetCtx.rotate(spinAngle);
+      }
+
+      // Scale ratio based on standard size 20
+      const s = size / 20;
+
+      // 1. Duck Body Outline & Fill (Rounded duck tail and belly)
+      targetCtx.fillStyle = palette.body;
+      targetCtx.strokeStyle = palette.darkStroke || '#EAB308';
+      targetCtx.lineWidth = 1.8 * s;
+
+      targetCtx.beginPath();
+      // Start from neck front
+      targetCtx.moveTo(-2 * s, 2 * s);
+      // Soft rounded belly extending back
+      targetCtx.bezierCurveTo(-14 * s, 6 * s, -18 * s, -2 * s, -22 * s, -10 * s); // Tail tip
+      targetCtx.bezierCurveTo(-18 * s, -4 * s, -10 * s, 8 * s, 0 * s, 8 * s);    // Bottom belly curve
+      targetCtx.bezierCurveTo(8 * s, 8 * s, 12 * s, 2 * s, 10 * s, -6 * s);
+      // Back neck upwards
+      targetCtx.bezierCurveTo(8 * s, -12 * s, -2 * s, -14 * s, -6 * s, -8 * s);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      // 2. Round Cute Head
+      targetCtx.beginPath();
+      targetCtx.arc(-2 * s, -10 * s, 12 * s, 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      // 3. Cute Wing (Softer inner oval tint)
+      targetCtx.fillStyle = palette.wing;
+      targetCtx.beginPath();
+      targetCtx.ellipse(-8 * s, 1 * s, 8 * s, 5 * s, -Math.PI / 8, 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      // 4. Pink Curved Beak (Left-pointing curved cute beak as in image)
+      targetCtx.fillStyle = '#F472B6'; // Cute Pink Beak
+      targetCtx.strokeStyle = '#DB2777';
+      targetCtx.lineWidth = 1.2 * s;
+      
+      targetCtx.beginPath();
+      targetCtx.moveTo(-11 * s, -11 * s);
+      targetCtx.bezierCurveTo(-18 * s, -14 * s, -22 * s, -8 * s, -15 * s, -4 * s);
+      targetCtx.bezierCurveTo(-12 * s, -3 * s, -10 * s, -7 * s, -11 * s, -11 * s);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      // 5. Pink Blush Cheek
+      targetCtx.fillStyle = '#F472B6';
+      targetCtx.globalAlpha = 0.6;
+      targetCtx.beginPath();
+      targetCtx.ellipse(-4 * s, -6 * s, 3.5 * s, 2.2 * s, 0, 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.globalAlpha = 1.0;
+
+      // 6. Big Black Eye with White Highlight
+      targetCtx.fillStyle = '#000000';
+      targetCtx.beginPath();
+      targetCtx.arc(-7 * s, -11 * s, 3.2 * s, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      // White Sparkle Pupil
+      targetCtx.fillStyle = '#FFFFFF';
+      targetCtx.beginPath();
+      targetCtx.arc(-8 * s, -12.2 * s, 1.2 * s, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      // 7. Player Name Tag
+      if (name) {
+        targetCtx.font = 'bold 11px Pretendard, sans-serif';
+        targetCtx.textAlign = 'center';
+        targetCtx.fillStyle = 'rgba(255,255,255,0.92)';
+        const nameWidth = targetCtx.measureText(name).width;
+        targetCtx.fillRect(-nameWidth/2 - 4, -size - 18, nameWidth + 8, 14);
+
+        targetCtx.fillStyle = '#0f172a';
+        targetCtx.fillText(name, 0, -size - 7);
+      }
+
+      targetCtx.restore();
+    }
+
+    function updateLeaderboardTicker() {
+      const sorted = [...ducks].sort((a, b) => b.x - a.x);
+      const container = document.getElementById('leaderboard-items');
+      container.innerHTML = sorted.slice(0, 4).map((d, idx) => `
+        <span class="flex items-center gap-1 ${idx === 0 ? 'text-amber-300 font-black' : 'text-slate-300'}">
+          ${idx + 1}등: ${d.name}
+        </span>
+      `).join('');
+    }
+
+    function cheerForDucks() {
+      cheerCount++;
+      document.getElementById('cheer-count').textContent = cheerCount;
+      playQuackSound();
+
+      const activeDucks = ducks.filter(d => !d.finished);
+      if (activeDucks.length > 0) {
+        const randDuck = activeDucks[Math.floor(Math.random() * activeDucks.length)];
+        randDuck.speed += 0.8;
+      }
+
+      confetti({
+        particleCount: 15,
+        spread: 60,
+        origin: { y: 0.85 }
+      });
+    }
+
+    function toggleSpeed() {
+      gameSpeedMultiplier = gameSpeedMultiplier === 1 ? 1.8 : 1;
+      document.getElementById('speed-label').textContent = `${gameSpeedMultiplier}x`;
+      showToast(`레이스 속도: ${gameSpeedMultiplier}x`);
+    }
+
+    /* ====================================================================
+       4. RESULTS & CEREMONY LOGIC
+       ==================================================================== */
+    function showFinalResults() {
+      playVictoryFanfare();
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+
+      let presenterDuck;
+      if (winRule === 'last') {
+        presenterDuck = finishedDucks[finishedDucks.length - 1];
+      } else {
+        presenterDuck = finishedDucks[0];
+      }
+
+      // Draw winning presenter duck avatar on podium canvas
+      const winnerCanvas = document.getElementById('winner-duck-canvas');
+      const wCtx = winnerCanvas.getContext('2d');
+      wCtx.clearRect(0, 0, 80, 80);
+      drawCustomDuck(wCtx, 40, 40, 22, presenterDuck.palette, 0, 0, '');
+
+      document.getElementById('presenter-name-display').textContent = `${presenterDuck.name} 님`;
+      document.getElementById('presenter-reason-display').textContent = winRule === 'last' 
+        ? '🐢 아쉽게도 꼴찌로 결승선을 통과했습니다!' 
+        : '🚀 당당히 1등으로 결승선을 통과했습니다!';
+
+      document.getElementById('pledge-name').textContent = presenterDuck.name;
+      
+      const now = new Date();
+      document.getElementById('pledge-date').textContent = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}`;
+
+      document.getElementById('win-rule-badge').textContent = winRule === 'last' ? '꼴찌가 발표자' : '1등이 발표자';
+
+      const rankContainer = document.getElementById('final-rankings-list');
+      rankContainer.innerHTML = finishedDucks.map((d, index) => {
+        const isPresenter = d.id === presenterDuck.id;
+        return `
+          <div class="flex items-center justify-between p-2 rounded-xl ${isPresenter ? 'bg-amber-100 border border-amber-300 font-bold' : 'bg-slate-50 text-slate-600'} text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-amber-400 text-amber-950 flex items-center justify-center text-[10px] font-black">
+                ${index + 1}
+              </span>
+              <span>${d.name}</span>
+            </div>
+            <span class="font-mono text-[10px] opacity-70">${d.finishTime.toFixed(2)}초</span>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('game-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.remove('hidden');
+      document.getElementById('result-screen').classList.add('flex');
+    }
+
+    function copyPledgeToClipboard() {
+      const name = document.getElementById('pledge-name').textContent;
+      const text = `[누가 발표할까 - 발표 서약서]\n\n본인 ${name}(은)는 공정한 '누가 발표할까' 오리보트 레이스 결과에 깨끗이 복종하며, 팀을 위해 최고의 발표를 선보일 것을 엄숙히 서약합니다! 🦆🎉`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('발표 서약서가 클립보드에 복사되었습니다!');
+      }).catch(() => {
+        showToast('복사에 실패했습니다.');
+      });
+    }
+
+    function restartSetup() {
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('setup-screen').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
